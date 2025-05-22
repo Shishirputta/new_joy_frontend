@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Users, MessageSquare, UserPlus, BarChart as ChartBar, ArrowLeft } from 'lucide-react';
 import EmotionTrackingReport from './EmotionTrackingReport';
@@ -345,11 +344,19 @@ export function AdminDashboard({ adminUsername }) {
     // Use totalScore from session (last entry's score)
     const score = session.totalScore;
     
+    // Create timestamps array for emotion vs. time graph
+    const timestamps = session.entries.map(entry => ({
+      time: entry.timestamp,
+      emotion: entry.emotion ? entry.emotion.toLowerCase() : 'neutral'
+    }));
+    
     // Debug log to verify data passed to report
     console.log(`Report for ${childName}, ${session.name}:`, {
       score,
       totalWordsCompleted: session.totalWordsCompleted,
-      entries: session.entries.map(e => ({ score: e.score, wordsFound: e.wordsFound, timestamp: e.timestamp }))
+      entries: session.entries.map(e => ({ score: e.score, wordsFound: e.wordsFound, timestamp: e.timestamp, emotion: e.emotion })),
+      timestamps,
+      emotionCounts
     });
     
     const uniqueEmotions = Object.values(emotionCounts).filter(count => count > 0).length;
@@ -365,13 +372,14 @@ export function AdminDashboard({ adminUsername }) {
     return {
       studentName: childName,
       sessionNumber: session.name,
-      sessionDate: "Today",
+      sessionDate: session.startTime.toLocaleDateString(),
       sessionDuration: sessionDuration,
       dominantEmotion: session.dominantEmotion,
       score: score,
       engagementScore: `${engagementScore}/10`,
       levels: levelInfo,
-      emotionCounts: emotionCounts
+      emotionCounts: emotionCounts,
+      timestamps: timestamps
     };
   };
 
