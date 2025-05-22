@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 
@@ -7,11 +5,13 @@ const EmotionTrackingReport = ({ gameData }) => {
   // Refs for chart canvases
   const emotionPieChartRef = useRef(null);
   const emotionBarChartRef = useRef(null);
+  const emotionTimeChartRef = useRef(null);
   
   // Chart instances
   const chartInstancesRef = useRef({
     pieChart: null,
-    barChart: null
+    barChart: null,
+    timeChart: null
   });
 
   // Define emotion colors
@@ -37,7 +37,7 @@ const EmotionTrackingReport = ({ gameData }) => {
     };
 
     // Initialize charts
-    if (emotionPieChartRef.current && emotionBarChartRef.current) {
+    if (emotionPieChartRef.current && emotionBarChartRef.current && emotionTimeChartRef.current) {
       cleanupCharts();
       
       // Get emotion data from props or use sample data if not available
@@ -54,7 +54,7 @@ const EmotionTrackingReport = ({ gameData }) => {
       // Calculate total for percentages
       const totalEmotions = Object.values(emotionData).reduce((sum, count) => sum + count, 0);
       
-      // Prepare data for charts
+      // Prepare data for pie and bar charts
       const labels = Object.keys(emotionData);
       const counts = Object.values(emotionData);
       const percentages = counts.map(count => (count / totalEmotions * 100).toFixed(1));
@@ -138,6 +138,98 @@ const EmotionTrackingReport = ({ gameData }) => {
               text: 'Emotion Counts for Session',
               font: {
                 size: 16
+              }
+            }
+          }
+        }
+      });
+
+      // Sample timestamp data or use provided data
+      const timestampData = gameData.timestamps || [
+        { time: '2025-05-21T10:00:00', emotion: 'happy' },
+        { time: '2025-05-21T10:01:00', emotion: 'neutral' },
+        { time: '2025-05-21T10:02:00', emotion: 'happy' },
+        { time: '2025-05-21T10:03:00', emotion: 'sad' },
+        { time: '2025-05-21T10:04:00', emotion: 'surprised' },
+        { time: '2025-05-21T10:05:00', emotion: 'happy' },
+        { time: '2025-05-21T10:06:00', emotion: 'angry' },
+        { time: '2025-05-21T10:07:00', emotion: 'neutral' },
+        { time: '2025-05-21T10:08:00', emotion: 'fear' },
+        { time: '2025-05-21T10:09:00', emotion: 'happy' }
+      ];
+
+      // Prepare data for line chart
+      const emotions = Object.keys(emotionColors);
+      const timestamps = [...new Set(timestampData.map(item => item.time))].sort();
+      const datasets = emotions.map(emotion => {
+        const data = timestamps.map(time => {
+          const entry = timestampData.find(item => item.time === time && item.emotion === emotion);
+          return entry ? 1 : 0; // 1 if emotion is present at this timestamp, 0 otherwise
+        });
+        return {
+          label: emotion.charAt(0).toUpperCase() + emotion.slice(1),
+          data,
+          borderColor: emotionColors[emotion],
+          backgroundColor: emotionColors[emotion] + '33', // Add transparency
+          fill: false,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        };
+      });
+
+      // Initialize Emotion vs Time Line Chart
+      chartInstancesRef.current.timeChart = new Chart(emotionTimeChartRef.current, {
+        type: 'line',
+        data: {
+          labels: timestamps.map(time => new Date(time).toLocaleTimeString()),
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 1,
+              ticks: {
+                stepSize: 1,
+                callback: value => value === 1 ? 'Present' : 'Absent'
+              },
+              title: {
+                display: true,
+                text: 'Emotion Presence'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                font: {
+                  family: "'Poppins', sans-serif",
+                  size: 12
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: 'Emotions Over Time',
+              font: {
+                size: 16
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y === 1 ? 'Present' : 'Absent'}`;
+                }
               }
             }
           }
@@ -330,6 +422,14 @@ const EmotionTrackingReport = ({ gameData }) => {
         </div>
       </div>
 
+      {/* Emotion vs Time */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Emotions Over Time</h3>
+        <div className="chart-container">
+          <canvas ref={emotionTimeChartRef}></canvas>
+        </div>
+      </div>
+
       {/* Emotion Cards */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Key Emotions Detected</h3>
@@ -348,7 +448,7 @@ const EmotionTrackingReport = ({ gameData }) => {
                   <div className={`${card.barColor} h-2 rounded-full`} style={{ width: `${card.percentage}%` }}></div>
                 </div>
               </div>
-              <div className="mt-2 text-sm text-gray-500">
+              <div className="mt-2 text-sm text-gray-600">
                 Count: {card.count}
               </div>
             </div>
